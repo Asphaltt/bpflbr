@@ -20,9 +20,11 @@ func (r *bpfProgKaddrRange) contains(addr uintptr) bool {
 	return r.start <= addr && addr < r.end
 }
 
-type bpfProgAddrLineInfo struct {
+type bpfProgFuncInfo struct {
 	kaddrRange bpfProgKaddrRange
 	funcName   string
+	funcProto  *btf.Func
+	funcParams []FuncParamFlags
 
 	jitedLineInfo []uintptr        // ordered
 	lineInfos     []btf.LineOffset // mapping 1:1 with jitedLineInfo
@@ -36,7 +38,11 @@ type bpfProgLineInfo struct {
 	fileLine uint32
 }
 
-func (b *bpfProgAddrLineInfo) get(addr uintptr) (*bpfProgLineInfo, bool) {
+func (b *bpfProgFuncInfo) contains(addr uintptr) bool {
+	return b.kaddrRange.contains(addr)
+}
+
+func (b *bpfProgFuncInfo) get(addr uintptr) (*bpfProgLineInfo, bool) {
 	if !b.kaddrRange.contains(addr) {
 		return nil, false
 	}
@@ -60,7 +66,7 @@ func (b *bpfProgAddrLineInfo) get(addr uintptr) (*bpfProgLineInfo, bool) {
 }
 
 type bpfProgInfo struct {
-	progs []*bpfProgAddrLineInfo
+	progs []*bpfProgFuncInfo
 
 	isLbrProg bool
 }
@@ -95,14 +101,16 @@ func newBPFProgInfo(prog *ebpf.Program) (*bpfProgInfo, error) {
 	}
 
 	var progInfo bpfProgInfo
-	progInfo.progs = make([]*bpfProgAddrLineInfo, 0, len(jitedFuncLens))
+	progInfo.progs = make([]*bpfProgFuncInfo, 0, len(jitedFuncLens))
 
 	insns := jitedInsns
 	for i, funcLen := range jitedFuncLens {
-		var info bpfProgAddrLineInfo
+		var info bpfProgFuncInfo
 		info.kaddrRange.start = jitedKsyms[i]
 		info.kaddrRange.end = info.kaddrRange.start + uintptr(funcLen)
 		info.funcName = strings.TrimSpace(funcInfos[i].Func.Name)
+		info.funcProto = funcInfos[i].Func
+		info.funcParams = getFuncParams(funcInfos[i].Func)
 
 		for i, kaddr := range jitedLineInfos {
 			if info.kaddrRange.start <= uintptr(kaddr) && uintptr(kaddr) < info.kaddrRange.end {

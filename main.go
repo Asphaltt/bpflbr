@@ -94,7 +94,7 @@ func main() {
 	assert.NoErr(err, "Failed to get bpf progs: %v")
 	defer bpfProgs.Close()
 
-	kfuncs, err := bpflbr.FindKernelFuncs(flags.Kfuncs())
+	kfuncs, err := bpflbr.FindKernelFuncs(flags.Kfuncs(), kallsyms)
 	assert.NoErr(err, "Failed to find kernel functions: %v")
 
 	tracingTargets := bpfProgs.Tracings()
@@ -184,7 +184,7 @@ func main() {
 	})
 
 	errg.Go(func() error {
-		return bpflbr.Run(reader, bpfProgs, addr2line, kallsyms, funcStacks, w)
+		return bpflbr.Run(reader, bpfProgs, addr2line, kallsyms, kfuncs, funcStacks, w)
 	})
 
 	err = errg.Wait()

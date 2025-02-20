@@ -1,9 +1,12 @@
 module github.com/Asphaltt/bpflbr
 
-go 1.22.4
+go 1.23.0
+
+toolchain go1.24.0
 
 require (
 	github.com/Asphaltt/addr2line v0.1.1
+	github.com/Asphaltt/mybtf v0.0.0-20250214152135-9b78e6e206e7
 	github.com/cilium/ebpf v0.17.3
 	github.com/fatih/color v1.18.0
 	github.com/gobwas/glob v0.2.3

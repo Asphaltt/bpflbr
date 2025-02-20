@@ -11,8 +11,9 @@ import (
 )
 
 type bpfProgs struct {
-	progs map[ebpf.ProgramID]*ebpf.Program
-	funcs map[uintptr]*bpfProgInfo // func IP -> prog info
+	progs map[ebpf.ProgramID]*ebpf.Program     // ID -> prog
+	infos map[ebpf.ProgramID]*ebpf.ProgramInfo // ID -> prog info
+	funcs map[uintptr]*bpfProgFuncInfo         // func IP -> prog func info
 
 	tracings map[string]bpfTracingInfo // id:func -> prog, func
 
@@ -22,7 +23,8 @@ type bpfProgs struct {
 func NewBPFProgs(pflags []ProgFlag, onlyPrepare, disasm bool) (*bpfProgs, error) {
 	var progs bpfProgs
 	progs.progs = make(map[ebpf.ProgramID]*ebpf.Program, len(pflags))
-	progs.funcs = make(map[uintptr]*bpfProgInfo, len(pflags))
+	progs.infos = make(map[ebpf.ProgramID]*ebpf.ProgramInfo, len(pflags))
+	progs.funcs = make(map[uintptr]*bpfProgFuncInfo, len(pflags))
 	progs.tracings = make(map[string]bpfTracingInfo, len(pflags))
 	progs.disasm = disasm
 
@@ -58,7 +60,9 @@ func (b *bpfProgs) addProg(prog *ebpf.Program, id ebpf.ProgramID, isLbr bool) er
 	}
 
 	progInfo.isLbrProg = isLbr
-	b.funcs[progInfo.progs[0].kaddrRange.start] = progInfo
+	for _, p := range progInfo.progs {
+		b.funcs[p.kaddrRange.start] = p
+	}
 	return nil
 }
 
@@ -95,8 +99,8 @@ func (b *bpfProgs) Tracings() []bpfTracingInfo {
 
 func (b *bpfProgs) get(addr uintptr) (*bpfProgLineInfo, bool) {
 	for _, info := range b.funcs {
-		if info.contains(addr) {
-			return info.get(addr)
+		if li, ok := info.get(addr); ok {
+			return li, true
 		}
 	}
 
@@ -107,16 +111,6 @@ func (b *bpfProgs) contains(addr uintptr) bool {
 	for _, info := range b.funcs {
 		if info.contains(addr) {
 			return true
-		}
-	}
-
-	return false
-}
-
-func (b *bpfProgs) isLbrProg(addr uintptr) bool {
-	for _, info := range b.funcs {
-		if info.contains(addr) {
-			return info.isLbrProg
 		}
 	}
 

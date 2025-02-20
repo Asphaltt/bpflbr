@@ -11,6 +11,8 @@ const (
 type LbrConfig struct {
 	Flags     uint32
 	FilterPid uint32
+	FnArgs    [MAX_BPF_FUNC_ARGS]FuncParamFlags
+	FnArgsNr  uint32
 }
 
 func (cfg *LbrConfig) SetSuppressLbr(v bool) {

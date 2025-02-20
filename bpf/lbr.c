@@ -6,14 +6,25 @@
 
 __u32 ready SEC(".data.ready") = 0;
 
-#define MAX_LBR_ENTRIES 32
+struct lbr_fn_arg_flags {
+    bool is_number_ptr;
+    bool is_str;
+};
+
+#define MAX_FN_ARGS 6
+struct lbr_fn_args {
+    struct lbr_fn_arg_flags args[MAX_FN_ARGS];
+    __u32 nr_fn_args;
+} __attribute__((packed));
 
 struct lbr_config {
     __u32 suppress_lbr:1;
     __u32 output_stack:1;
     __u32 pad:30;
     __u32 pid;
-};
+
+    struct lbr_fn_args fn_args;
+} __attribute__((packed));
 
 volatile const struct lbr_config lbr_config = {};
 #define cfg (&lbr_config)
@@ -26,11 +37,22 @@ struct {
 	__uint(value_size, MAX_STACK_DEPTH * sizeof(u64));
 } func_stacks SEC(".maps");
 
+struct lbr_fn_arg_data {
+    __u64 raw_data;
+    __u64 ptr_data;
+};
+
+struct lbr_fn_args_data {
+    struct lbr_fn_arg_data args[MAX_FN_ARGS];
+    __u8 str[32];
+};
+
 struct {
     __uint(type, BPF_MAP_TYPE_RINGBUF);
     __uint(max_entries, 4096<<8);
 } events SEC(".maps");
 
+#define MAX_LBR_ENTRIES 32
 struct event {
     struct perf_branch_entry lbr[MAX_LBR_ENTRIES];
     __s64 nr_bytes;
@@ -40,9 +62,33 @@ struct event {
     __u32 pid;
     __u8 comm[16];
     __s64 func_stack_id;
+    struct lbr_fn_args_data fn_args;
 } __attribute__((packed));
 
 struct event lbr_events[1] SEC(".data.lbrs");
+
+static __always_inline void
+output_fn_args(struct event *event, void *ctx)
+{
+    __u64 arg;
+    __u32 i;
+
+    for (i = 0; i < MAX_FN_ARGS; i++) {
+        if (i >= cfg->fn_args.nr_fn_args)
+            break;
+
+        (void) bpf_get_func_arg(ctx, i, &arg);
+        event->fn_args.args[i].raw_data = arg;
+
+        if (!arg)
+            continue;
+
+        if (cfg->fn_args.args[i].is_str)
+            bpf_probe_read_kernel_str(&event->fn_args.str, sizeof(event->fn_args.str), (void *) arg);
+        else if (cfg->fn_args.args[i].is_number_ptr)
+            bpf_probe_read_kernel(&event->fn_args.args[i].ptr_data, sizeof(event->fn_args.args[i].ptr_data), (void *) arg);
+    }
+}
 
 static __always_inline int
 emit_lbr_event(void *ctx)
@@ -76,6 +122,7 @@ emit_lbr_event(void *ctx)
     event->func_stack_id = -1;
     if (cfg->output_stack)
         event->func_stack_id = bpf_get_stackid(ctx, &func_stacks, BPF_F_FAST_STACK_CMP);
+    output_fn_args(event, ctx);
 
     bpf_ringbuf_output(&events, event, sizeof(*event), 0);
 

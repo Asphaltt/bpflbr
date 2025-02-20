@@ -104,6 +104,12 @@ The colorful output of `./bpflbr -v -k ip_rcv --suppress-lbr --output-stack`:
 
 ![func stack example](./img/func%20stack%20example.png)
 
+## Feature: output arguments and return value
+
+`bpflbr` is able to output type, name and value of arguments, and type and value of return value.
+
+![args and ret example](./img/func%20args%20and%20ret%20example.png)
+
 ## TODO list
 
 - [ ] Develop `bpflbr` feature to trace userspace functions with uretprobe (**HELP WANTED**).

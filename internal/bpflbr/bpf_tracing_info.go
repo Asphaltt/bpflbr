@@ -7,11 +7,42 @@ import (
 	"fmt"
 
 	"github.com/cilium/ebpf"
+	"github.com/cilium/ebpf/btf"
+
+	"github.com/Asphaltt/bpflbr/internal/btfx"
 )
 
 type bpfTracingInfo struct {
 	prog     *ebpf.Program
 	funcName string
+	params   []FuncParamFlags
+}
+
+func getFuncParams(fn *btf.Func) []FuncParamFlags {
+	fnParams := fn.Type.(*btf.FuncProto).Params
+	params := make([]FuncParamFlags, 0, len(fnParams))
+	for _, p := range fnParams {
+		params = append(params, FuncParamFlags{
+			IsNumberPtr: btfx.IsNumberPointer(p.Type),
+			IsStr:       btfx.IsStr(p.Type),
+		})
+	}
+	return params
+}
+
+func getProgFuncParams(info *ebpf.ProgramInfo, funcName string) ([]FuncParamFlags, error) {
+	fns, err := info.FuncInfos()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get func infos: %w", err)
+	}
+
+	for _, fn := range fns {
+		if fn.Func.Name == funcName {
+			return getFuncParams(fn.Func), nil
+		}
+	}
+
+	return nil, fmt.Errorf("failed to find func %s", funcName)
 }
 
 func (p *bpfProgs) addTracing(id ebpf.ProgramID, funcName string, prog *ebpf.Program) error {
@@ -25,9 +56,15 @@ func (p *bpfProgs) addTracing(id ebpf.ProgramID, funcName string, prog *ebpf.Pro
 	}
 
 	if prev, ok := p.progs[id]; ok {
+		params, err := getProgFuncParams(p.infos[id], funcName)
+		if err != nil {
+			return fmt.Errorf("failed to get func params for %s: %w", funcName, err)
+		}
+
 		p.tracings[key] = bpfTracingInfo{
 			prog:     prev,
 			funcName: funcName,
+			params:   params,
 		}
 
 		return nil
@@ -38,10 +75,22 @@ func (p *bpfProgs) addTracing(id ebpf.ProgramID, funcName string, prog *ebpf.Pro
 		return fmt.Errorf("failed to clone prog %d: %w", id, err)
 	}
 
+	info, err := prog.Info()
+	if err != nil {
+		return fmt.Errorf("failed to get prog info for %d: %w", id, err)
+	}
+
+	params, err := getProgFuncParams(info, funcName)
+	if err != nil {
+		return fmt.Errorf("failed to get func params for %s: %w", funcName, err)
+	}
+
 	p.progs[id] = cloned
+	p.infos[id] = info
 	p.tracings[key] = bpfTracingInfo{
 		prog:     cloned,
 		funcName: funcName,
+		params:   params,
 	}
 
 	return nil

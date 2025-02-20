@@ -2,6 +2,8 @@ github.com/Asphaltt/addr2line v0.1.1 h1:eYkAgT9clEjzYMVeTY3dF0dFjX5gc97yWuoGHmvq
 github.com/Asphaltt/addr2line v0.1.1/go.mod h1:02z/FcEJ9rsH1i7It81L6xHtjSoBOrKbDtTGlptzfP0=
 github.com/Asphaltt/gapstone v0.0.0-20241029140935-c5412a26abf7 h1:z1Ohf61MSfgVMxAs2Z4nWZ4p+a12K/u41JJurdIxdBU=
 github.com/Asphaltt/gapstone v0.0.0-20241029140935-c5412a26abf7/go.mod h1:1K5hEzsMBLTPdRJKEHqBFJ8Zt2VRqDhomcQ11KH0WW4=
+github.com/Asphaltt/mybtf v0.0.0-20250214152135-9b78e6e206e7 h1:F3HT6v6BsAwvXpnDtxwKDhdzI9h2s3N+K0VmZL9CZXc=
+github.com/Asphaltt/mybtf v0.0.0-20250214152135-9b78e6e206e7/go.mod h1:ZxswciFofS8TXGsc2j5CWCY8O3XwKEysCnU7hoI1fnI=
 github.com/cilium/ebpf v0.17.3 h1:FnP4r16PWYSE4ux6zN+//jMcW4nMVRvuTLVTvCjyyjg=
 github.com/cilium/ebpf v0.17.3/go.mod h1:G5EDHij8yiLzaqn0WjyfJHvRa+3aDlReIaLVRMvOyJk=
 github.com/fatih/color v1.18.0 h1:S8gINlzdQ840/4pfAwic/ZE0djQEH3wM94VfqLTZcOM=
