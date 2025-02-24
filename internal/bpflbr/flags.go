@@ -30,6 +30,7 @@ var (
 	verbose           bool
 	disasmIntelSyntax bool
 	mode              string
+	filterArg         string
 
 	suppressLbr     bool
 	outputFuncStack bool
@@ -157,11 +158,13 @@ func ParseFlags() (*Flags, error) {
 	f.BoolVar(&suppressLbr, "suppress-lbr", false, "suppress LBR perf event")
 	f.BoolVar(&outputFuncStack, "output-stack", false, "output function call stack")
 	f.Uint32Var(&filterPid, "filter-pid", 0, "filter pid for tracing")
+	f.StringVar(&filterArg, "filter-arg", "", "filter function's argument with simple C expression, e.g. 'prog->type == BPF_PROG_TYPE_TRACING'")
 	f.UintVar(&limitEvents, "limit-events", 0, "limited number events to output, 0 to output all events")
 
 	err := f.Parse(os.Args)
 
 	noColorOutput = flags.outputFile != "" || !isatty(os.Stdout.Fd())
+	fnArg = prepareFuncArgument(filterArg)
 
 	return &flags, err
 }

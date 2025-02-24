@@ -40,9 +40,11 @@ Usage of bpflbr:
   -d, --disasm                disasm bpf prog or kernel function
   -B, --disasm-bytes uint     disasm bytes of kernel function, 0 to guess it automatically
       --disasm-intel-syntax   use Intel asm syntax for disasm, ATT asm syntax by default
+      --filter-arg string     filter function's argument with simple C expression, e.g. 'prog->type == BPF_PROG_TYPE_TRACING'
       --filter-pid uint32     filter pid for tracing
   -k, --kfunc strings         filter kernel functions by shell wildcards way
       --kfunc-all-kmods       filter functions in all kernel modules
+      --limit-events uint     limited number events to output, 0 to output all events
   -m, --mode string           mode of lbr tracing, exit or entry (default "exit")
   -o, --output string         output file for the result, default is stdout
       --output-stack          output function call stack
@@ -113,7 +115,6 @@ The colorful output of `./bpflbr -v -k ip_rcv --suppress-lbr --output-stack`:
 ## TODO list
 
 - [ ] Filter kernel functions by their argument's name.
-- [ ] Filter function argument with [bice](https://github.com/leonhwangprojects/bice).
 - [ ] Output function argument's metadata dynamically like the way of `bice`.
 - [ ] Filter skb/xdp data with [pcap-filter(7)](https://www.tcpdump.org/manpages/pcap-filter.7.html).
 
