@@ -13,9 +13,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Asphaltt/bpflbr/internal/assert"
 	"github.com/fatih/color"
 	"github.com/knightsc/gapstone"
+
+	"github.com/Asphaltt/bpflbr/internal/assert"
 )
 
 const (
@@ -158,7 +159,7 @@ func dumpKfunc(kfunc string, bytes uint) {
 	}
 
 	VerboseLog("Disassembling bpf progs ..")
-	bpfProgs, err := NewBPFProgs(nil, false, true)
+	bpfProgs, err := NewBPFProgs([]ProgFlag{{all: true}}, false, true)
 	assert.NoErr(err, "Failed to get bpf progs: %v")
 	defer bpfProgs.Close()
 

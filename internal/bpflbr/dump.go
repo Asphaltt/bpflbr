@@ -64,7 +64,7 @@ func DumpProg(pf []ProgFlag) {
 	defer engine.Close()
 
 	VerboseLog("Disassembling bpf progs ..")
-	bpfProgs, err := NewBPFProgs(nil, false, true)
+	bpfProgs, err := NewBPFProgs([]ProgFlag{{all: true}}, false, true)
 	assert.NoErr(err, "Failed to get bpf progs: %v")
 	defer bpfProgs.Close()
 
