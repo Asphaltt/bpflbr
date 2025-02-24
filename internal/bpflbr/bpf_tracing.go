@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/cilium/ebpf"
+	"github.com/cilium/ebpf/btf"
 	"github.com/cilium/ebpf/link"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sys/unix"
@@ -113,13 +114,27 @@ func (t *bpfTracing) traceProg(spec *ebpf.CollectionSpec, reusedMaps map[string]
 		return fmt.Errorf("failed to set lbr config: %w", err)
 	}
 
+	tracingFuncName := TracingProgName(mode)
+	progSpec := spec.Programs[tracingFuncName]
+
+	injected := false
+	params := info.fn.Type.(*btf.FuncProto).Params
+	for i, p := range params {
+		if p.Name == fnArg.name {
+			_ = fnArg.inject(progSpec, i, p.Type)
+			injected = true
+			break
+		}
+	}
+	if !injected {
+		fnArg.clear(progSpec)
+	}
+
 	attachType := ebpf.AttachTraceFExit
 	if mode == TracingModeEntry {
 		attachType = ebpf.AttachTraceFEntry
 	}
 
-	tracingFuncName := TracingProgName(mode)
-	progSpec := spec.Programs[tracingFuncName]
 	progSpec.AttachTarget = info.prog
 	progSpec.AttachTo = info.funcName
 	progSpec.AttachType = attachType
@@ -163,13 +178,27 @@ func (t *bpfTracing) traceFunc(spec *ebpf.CollectionSpec, reusedMaps map[string]
 		return fmt.Errorf("failed to set lbr config: %w", err)
 	}
 
+	tracingFuncName := TracingProgName(mode)
+	progSpec := spec.Programs[tracingFuncName]
+
+	injected := false
+	params := fn.Func.Type.(*btf.FuncProto).Params
+	for i, p := range params {
+		if p.Name == fnArg.name {
+			_ = fnArg.inject(progSpec, i, p.Type)
+			injected = true
+			break
+		}
+	}
+	if !injected {
+		fnArg.clear(progSpec)
+	}
+
 	attachType := ebpf.AttachTraceFExit
 	if mode == TracingModeEntry {
 		attachType = ebpf.AttachTraceFEntry
 	}
 
-	tracingFuncName := TracingProgName(mode)
-	progSpec := spec.Programs[tracingFuncName]
 	fnName := fn.Func.Name
 	progSpec.AttachTo = fnName
 	progSpec.AttachType = attachType

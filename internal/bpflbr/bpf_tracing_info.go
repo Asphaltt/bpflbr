@@ -15,6 +15,7 @@ import (
 type bpfTracingInfo struct {
 	prog     *ebpf.Program
 	funcName string
+	fn       *btf.Func
 	params   []FuncParamFlags
 }
 
@@ -34,7 +35,7 @@ func getFuncParams(fn *btf.Func) []FuncParamFlags {
 	return params
 }
 
-func getProgFuncParams(info *ebpf.ProgramInfo, funcName string) ([]FuncParamFlags, error) {
+func getProgFunc(info *ebpf.ProgramInfo, funcName string) (*btf.Func, error) {
 	fns, err := info.FuncInfos()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get func infos: %w", err)
@@ -42,7 +43,7 @@ func getProgFuncParams(info *ebpf.ProgramInfo, funcName string) ([]FuncParamFlag
 
 	for _, fn := range fns {
 		if fn.Func.Name == funcName {
-			return getFuncParams(fn.Func), nil
+			return fn.Func, nil
 		}
 	}
 
@@ -60,7 +61,7 @@ func (p *bpfProgs) addTracing(id ebpf.ProgramID, funcName string, prog *ebpf.Pro
 	}
 
 	if prev, ok := p.progs[id]; ok {
-		params, err := getProgFuncParams(p.infos[id], funcName)
+		fn, err := getProgFunc(p.infos[id], funcName)
 		if err != nil {
 			return fmt.Errorf("failed to get func params for %s: %w", funcName, err)
 		}
@@ -68,7 +69,8 @@ func (p *bpfProgs) addTracing(id ebpf.ProgramID, funcName string, prog *ebpf.Pro
 		p.tracings[key] = bpfTracingInfo{
 			prog:     prev,
 			funcName: funcName,
-			params:   params,
+			fn:       fn,
+			params:   getFuncParams(fn),
 		}
 
 		return nil
@@ -84,7 +86,7 @@ func (p *bpfProgs) addTracing(id ebpf.ProgramID, funcName string, prog *ebpf.Pro
 		return fmt.Errorf("failed to get prog info for %d: %w", id, err)
 	}
 
-	params, err := getProgFuncParams(info, funcName)
+	fn, err := getProgFunc(info, funcName)
 	if err != nil {
 		return fmt.Errorf("failed to get func params for %s: %w", funcName, err)
 	}
@@ -94,7 +96,8 @@ func (p *bpfProgs) addTracing(id ebpf.ProgramID, funcName string, prog *ebpf.Pro
 	p.tracings[key] = bpfTracingInfo{
 		prog:     cloned,
 		funcName: funcName,
-		params:   params,
+		fn:       fn,
+		params:   getFuncParams(fn),
 	}
 
 	return nil

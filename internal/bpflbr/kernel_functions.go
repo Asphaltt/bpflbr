@@ -8,9 +8,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/Asphaltt/bpflbr/internal/btfx"
 	"github.com/cilium/ebpf/btf"
 	"github.com/gobwas/glob"
+
+	"github.com/Asphaltt/bpflbr/internal/btfx"
 )
 
 const (
