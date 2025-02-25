@@ -24,8 +24,8 @@ import (
 	"github.com/Asphaltt/bpflbr/internal/bpflbr"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang lbr ./bpf/lbr.c -- -g -D__TARGET_ARCH_x86 -I./bpf/headers -Wall
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang feat ./bpf/feature.c -- -g -D__TARGET_ARCH_x86 -I./bpf/headers -Wall
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang lbr ./bpf/lbr.c -- -g -D__TARGET_ARCH_x86 -I./bpf/headers -I./lib/libbpf/src -I./lib/libbpf/include -Wall
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang feat ./bpf/feature.c -- -g -D__TARGET_ARCH_x86 -I./bpf/headers -I./lib/libbpf/src -I./lib/libbpf/include -Wall
 
 func main() {
 	flags, err := bpflbr.ParseFlags()

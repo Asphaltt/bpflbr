@@ -35,7 +35,8 @@ local_release: $(BPFLBR_OBJ)
 .PHONY: clean
 clean:
 	rm -f $(BPF_OBJ)
-	rm -f bpflbr
+	rm -f $(BPFLBR_OBJ)
+	rm -f $(VMLINUX_OBJ)
 	rm -rf $(DIR_BIN)/*
 	@touch $(DIR_BIN)/.gitkeep
 
