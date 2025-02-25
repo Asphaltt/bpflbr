@@ -6,11 +6,12 @@ package bpflbr
 import (
 	"fmt"
 
-	"github.com/Asphaltt/bpflbr/internal/strx"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/asm"
 	"github.com/cilium/ebpf/btf"
 	"github.com/leonhwangprojects/bice"
+
+	"github.com/Asphaltt/bpflbr/internal/strx"
 )
 
 const (

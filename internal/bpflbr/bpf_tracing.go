@@ -9,6 +9,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/Asphaltt/mybtf"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/btf"
 	"github.com/cilium/ebpf/link"
@@ -107,6 +108,96 @@ func TracingProgName(mode string) string {
 	return fmt.Sprintf("f%s_fn", mode)
 }
 
+func (t *bpfTracing) injectFnArg(prog *ebpf.ProgramSpec, params []btf.FuncParam) error {
+	for i, p := range params {
+		if p.Name == fnArg.name {
+			if err := fnArg.inject(prog, i, p.Type); err != nil {
+				return fmt.Errorf("failed to inject fn arg to bpf prog %s: %w", prog.Name, err)
+			}
+			return nil
+		}
+	}
+
+	fnArg.clear(prog)
+
+	return nil
+}
+
+func getStructBtfPointer(name string) (*btf.Pointer, error) {
+	spec, err := btf.LoadKernelSpec()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load kernel btf spec: %w", err)
+	}
+
+	typ, err := spec.AnyTypeByName(name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get type %s: %w", name, err)
+	}
+
+	s, ok := typ.(*btf.Struct)
+	if !ok {
+		return nil, fmt.Errorf("type %s is not a struct", name)
+	}
+
+	return &btf.Pointer{Target: s}, nil
+}
+
+func (t *bpfTracing) injectSkbFilter(prog *ebpf.ProgramSpec, index int, typ btf.Type) error {
+	if err := pktFilter.filterSkb(prog, index, typ); err != nil {
+		return fmt.Errorf("failed to inject skb pcap-filter: %w", err)
+	}
+
+	return nil
+}
+
+func (t *bpfTracing) injectXdpFilter(prog *ebpf.ProgramSpec, index int, typ btf.Type) error {
+	if err := pktFilter.filterXdp(prog, index, typ); err != nil {
+		return fmt.Errorf("failed to inject xdp pcap-filter: %w", err)
+	}
+
+	return nil
+}
+
+func (t *bpfTracing) injectPktFilter(prog *ebpf.ProgramSpec, params []btf.FuncParam) error {
+	for i, p := range params {
+		typ := mybtf.UnderlyingType(p.Type)
+		ptr, ok := typ.(*btf.Pointer)
+		if !ok {
+			continue
+		}
+		stt, ok := ptr.Target.(*btf.Struct)
+		if !ok {
+			continue
+		}
+
+		switch stt.Name {
+		case "sk_buff":
+			return t.injectSkbFilter(prog, i, typ)
+
+		case "__sk_buff":
+			typ, err := getStructBtfPointer("sk_buff")
+			if err != nil {
+				return err
+			}
+			return t.injectSkbFilter(prog, i, typ)
+
+		case "xdp_buff":
+			return t.injectXdpFilter(prog, i, typ)
+
+		case "xdp_md":
+			typ, err := getStructBtfPointer("xdp_buff")
+			if err != nil {
+				return err
+			}
+			return t.injectXdpFilter(prog, i, typ)
+		}
+	}
+
+	pktFilter.clear(prog)
+
+	return nil
+}
+
 func (t *bpfTracing) traceProg(spec *ebpf.CollectionSpec, reusedMaps map[string]*ebpf.Map, info bpfTracingInfo) error {
 	spec = spec.Copy()
 
@@ -117,17 +208,12 @@ func (t *bpfTracing) traceProg(spec *ebpf.CollectionSpec, reusedMaps map[string]
 	tracingFuncName := TracingProgName(mode)
 	progSpec := spec.Programs[tracingFuncName]
 
-	injected := false
 	params := info.fn.Type.(*btf.FuncProto).Params
-	for i, p := range params {
-		if p.Name == fnArg.name {
-			_ = fnArg.inject(progSpec, i, p.Type)
-			injected = true
-			break
-		}
+	if err := t.injectFnArg(progSpec, params); err != nil {
+		return err
 	}
-	if !injected {
-		fnArg.clear(progSpec)
+	if err := t.injectPktFilter(progSpec, params); err != nil {
+		return err
 	}
 
 	attachType := ebpf.AttachTraceFExit
@@ -181,17 +267,12 @@ func (t *bpfTracing) traceFunc(spec *ebpf.CollectionSpec, reusedMaps map[string]
 	tracingFuncName := TracingProgName(mode)
 	progSpec := spec.Programs[tracingFuncName]
 
-	injected := false
 	params := fn.Func.Type.(*btf.FuncProto).Params
-	for i, p := range params {
-		if p.Name == fnArg.name {
-			_ = fnArg.inject(progSpec, i, p.Type)
-			injected = true
-			break
-		}
+	if err := t.injectFnArg(progSpec, params); err != nil {
+		return err
 	}
-	if !injected {
-		fnArg.clear(progSpec)
+	if err := t.injectPktFilter(progSpec, params); err != nil {
+		return err
 	}
 
 	attachType := ebpf.AttachTraceFExit

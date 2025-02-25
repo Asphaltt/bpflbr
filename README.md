@@ -22,11 +22,11 @@ This is a function call stack from callers to callees based on LBR records provi
 
 ## Dependencies
 
-- *libcapstone-dev*: for disassembling machine native instructions.
+- _libcapstone-dev_: for disassembling machine native instructions.
 
 ## Build
 
-With *libcapstone-dev*, build `bpflbr` by running:
+With _libcapstone-dev_, build `bpflbr` by running:
 
 ```bash
 make
@@ -41,6 +41,7 @@ Usage of bpflbr:
   -B, --disasm-bytes uint     disasm bytes of kernel function, 0 to guess it automatically
       --disasm-intel-syntax   use Intel asm syntax for disasm, ATT asm syntax by default
       --filter-pid uint32     filter pid for tracing
+      --filter-pkt string     filter packet with pcap-filter(7) expr, e.g. 'icmp and host 1.1.1.1'
   -k, --kfunc strings         filter kernel functions by shell wildcards way
       --kfunc-all-kmods       filter functions in all kernel modules
   -m, --mode string           mode of lbr tracing, exit or entry (default "exit")
@@ -115,7 +116,6 @@ The colorful output of `./bpflbr -v -k ip_rcv --suppress-lbr --output-stack`:
 - [ ] Filter kernel functions by their argument's name.
 - [ ] Filter function argument with [bice](https://github.com/leonhwangprojects/bice).
 - [ ] Output function argument's metadata dynamically like the way of `bice`.
-- [ ] Filter skb/xdp data with [pcap-filter(7)](https://www.tcpdump.org/manpages/pcap-filter.7.html).
 
 ## Acknowledgments
 

@@ -8,10 +8,14 @@ CMD_GH ?= gh
 CMD_MV ?= mv
 CMD_TAR ?= tar
 
+CMD_CC ?= clang
+CMD_CXX ?= clang++
+
 DIR_BIN := ./bin
 
 GOBUILD := go build -v -trimpath
-GOBUILD_CGO_LDFLAGS := CGO_LDFLAGS='-O2 -g -lcapstone -static'
+GOBUILD_CGO_CFLAGS := CGO_CFLAGS='-O2 -I$(CURDIR)/lib/libpcap'
+GOBUILD_CGO_LDFLAGS := CGO_LDFLAGS='-O2 -g -L$(CURDIR)/lib/libpcap -lcapstone -lpcap -static'
 
 GOGEN := go generate
 
@@ -23,13 +27,22 @@ BPFLBR_SRC := $(shell find internal -type f -name '*.go') main.go
 BPFLBR_CSM := $(BPFLBR_OBJ).sha256sum
 RELEASE_NOTES ?= release_notes.txt
 
+LIBPCAP_OBJ := lib/libpcap/libpcap.a
+
 .DEFAULT_GOAL := $(BPFLBR_OBJ)
+
+# Build libpcap for static linking
+$(LIBPCAP_OBJ):
+	cd lib/libpcap && \
+		./autogen.sh && \
+		CC=$(CMD_CC) CXX=$(CMD_CXX) ./configure --disable-rdma --disable-shared --disable-usb --disable-netmap --disable-bluetooth --disable-dbus --without-libnl && \
+		make
 
 $(BPF_OBJ): $(BPF_SRC)
 	$(GOGEN)
 
-$(BPFLBR_OBJ): $(BPF_OBJ) $(BPFLBR_SRC)
-	$(GOBUILD_CGO_LDFLAGS) $(GOBUILD)
+$(BPFLBR_OBJ): $(BPF_OBJ) $(BPFLBR_SRC) $(LIBPCAP_OBJ)
+	$(GOBUILD_CGO_CFLAGS) $(GOBUILD_CGO_LDFLAGS) $(GOBUILD)
 
 .PHONY: local_release
 local_release: $(BPFLBR_OBJ)
