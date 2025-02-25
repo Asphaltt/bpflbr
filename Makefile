@@ -13,8 +13,8 @@ CC ?= gcc
 DIR_BIN := ./bin
 
 GOBUILD := go build -v -trimpath
-GOBUILD_CGO_CFLAGS := CGO_CFLAGS='-O2 -Ilib/capstone/include -Ilib/libpcap'
-GOBUILD_CGO_LDFLAGS := CGO_LDFLAGS='-g -Llib/capstone/build -Llib/libpcap -lcapstone -lpcap -static'
+GOBUILD_CGO_CFLAGS := CGO_CFLAGS='-O2 -I$(CURDIR)/lib/capstone/include -I$(CURDIR)/lib/libpcap'
+GOBUILD_CGO_LDFLAGS := CGO_LDFLAGS='-g -L$(CURDIR)/lib/capstone/build -L$(CURDIR)/lib/libpcap -lcapstone -lpcap -static'
 
 GOGEN := go generate
 
@@ -27,6 +27,8 @@ RELEASE_NOTES ?= release_notes.txt
 
 LIBPCAP_OBJ := lib/libpcap/libpcap.a
 
+LIBCAPSTONE_OBJ := lib/capstone/build/libcapstone.a
+
 .DEFAULT_GOAL := $(BPFLBR_OBJ)
 
 # Build libpcap for static linking
@@ -36,10 +38,16 @@ $(LIBPCAP_OBJ):
 		./configure --disable-rdma --disable-shared --disable-usb --disable-netmap --disable-bluetooth --disable-dbus --without-libnl --host=$(LIBPCAP_ARCH) && \
 		make
 
+# Build libcapstone for static linking
+$(LIBCAPSTONE_OBJ):
+	cd lib/capstone && \
+		cmake -B build -DCMAKE_BUILD_TYPE=Release -DCAPSTONE_ARCHITECTURE_DEFAULT=1 -DCAPSTONE_BUILD_CSTOOL=0 && \
+		cmake --build build
+
 $(BPF_OBJ): $(BPF_SRC)
 	$(GOGEN)
 
-$(BPFLBR_OBJ): $(BPF_OBJ) $(LIBPCAP_OBJ)
+$(BPFLBR_OBJ): $(BPF_OBJ) $(LIBPCAP_OBJ) $(LIBCAPSTONE_OBJ)
 	$(GOBUILD_CGO_CFLAGS) $(GOBUILD_CGO_LDFLAGS) $(GOBUILD)
 
 .PHONY: local_release
