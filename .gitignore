@@ -29,3 +29,5 @@ go.work
 /bpflbr
 
 /bin/*
+
+/bpf/headers/vmlinux.h
