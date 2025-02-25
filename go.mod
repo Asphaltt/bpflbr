@@ -11,6 +11,7 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/gobwas/glob v0.2.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
+	github.com/jschwinger233/elibpcap v1.0.0
 	github.com/klauspost/compress v1.17.11
 	github.com/knightsc/gapstone v4.0.1+incompatible
 	github.com/leonhwangprojects/bice v0.1.0
@@ -20,8 +21,11 @@ require (
 )
 
 require (
+	github.com/cloudflare/cbpfc v0.0.0-20230809125630-31aa294050ff // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	rsc.io/c2go v0.0.0-20170620140410-520c22818a08 // indirect
 )
 

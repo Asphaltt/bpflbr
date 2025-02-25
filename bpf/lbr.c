@@ -93,6 +93,57 @@ output_fn_args(struct event *event, void *ctx)
 }
 
 static __noinline bool
+filter_pcap_l3(void *_skb, void *__skb, void *___skb, void *data, void *data_end)
+{
+    return data != data_end && _skb == __skb && __skb == ___skb;
+}
+
+static __always_inline bool
+filter_skb_l3(struct sk_buff *skb)
+{
+    void *skb_head = skb->head;
+    void *data = skb_head + skb->network_header;
+    void *data_end = skb_head + skb->tail;
+    return filter_pcap_l3(skb, skb, skb, data, data_end);
+}
+
+static __noinline bool
+filter_pcap_l2(void *_skb, void *__skb, void *___skb, void *data, void *data_end)
+{
+    return data != data_end && _skb == __skb && __skb == ___skb;
+}
+
+static __always_inline bool
+filter_skb_l2(struct sk_buff *skb)
+{
+    void *skb_head = skb->head;
+    void *data = skb_head + skb->mac_header;
+    void *data_end = skb_head + skb->tail;
+    return filter_pcap_l2(skb, skb, skb, data, data_end);
+}
+
+static __noinline bool
+filter_skb(struct sk_buff *skb)
+{
+    return skb->mac_len ? filter_skb_l2(skb) : filter_skb_l3(skb);
+}
+
+static __noinline bool
+filter_xdp(struct xdp_buff *xdp)
+{
+    void *data = xdp->data;
+    void *data_end = xdp->data_end;
+    return filter_pcap_l2(xdp, xdp, xdp, data, data_end);
+}
+
+static __noinline bool
+filter_pkt(void *ctx)
+{
+    /* This function will be rewrote by Go totally. */
+    return ctx ? filter_skb(ctx) : filter_xdp(ctx);
+}
+
+static __noinline bool
 filter_arg(void *ctx)
 {
     return ctx != NULL;
@@ -121,7 +172,7 @@ emit_lbr_event(void *ctx)
     event->pid = bpf_get_current_pid_tgid() >> 32;
     if (cfg->pid && event->pid != cfg->pid)
         return BPF_OK;
-    if (!filter_arg(ctx))
+    if (!filter_arg(ctx) || !filter_pkt(ctx))
         return BPF_OK;
 
     bpf_get_func_ret(ctx, (void *) &retval); /* required 5.17 kernel. */
