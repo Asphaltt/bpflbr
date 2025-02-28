@@ -92,6 +92,12 @@ output_fn_args(struct event *event, void *ctx)
     }
 }
 
+static __noinline bool
+filter_fnarg(void *ctx)
+{
+    return ctx != NULL;
+}
+
 static __always_inline int
 emit_btrace_event(void *ctx)
 {
@@ -114,6 +120,8 @@ emit_btrace_event(void *ctx)
 
     event->pid = bpf_get_current_pid_tgid() >> 32;
     if (cfg->pid && event->pid != cfg->pid)
+        return BPF_OK;
+    if (!filter_fnarg(ctx))
         return BPF_OK;
 
     bpf_get_func_ret(ctx, (void *) &retval); /* required 5.17 kernel. */

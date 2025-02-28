@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/cilium/ebpf"
+	"github.com/cilium/ebpf/btf"
 	"github.com/cilium/ebpf/link"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sys/unix"
@@ -106,6 +107,23 @@ func TracingProgName(mode string) string {
 	return fmt.Sprintf("f%s_fn", mode)
 }
 
+func (t *bpfTracing) injectFnArg(prog *ebpf.ProgramSpec, params []btf.FuncParam) error {
+	for i, p := range params {
+		if p.Name == fnArg.name {
+			err := fnArg.inject(prog, i, p.Type)
+			if err != nil {
+				return fmt.Errorf("failed to inject func arg filter expr: %w", err)
+			}
+
+			return nil
+		}
+	}
+
+	fnArg.clear(prog)
+
+	return nil
+}
+
 func (t *bpfTracing) traceProg(spec *ebpf.CollectionSpec, reusedMaps map[string]*ebpf.Map, info bpfTracingInfo) error {
 	spec = spec.Copy()
 
@@ -113,13 +131,18 @@ func (t *bpfTracing) traceProg(spec *ebpf.CollectionSpec, reusedMaps map[string]
 		return fmt.Errorf("failed to set btrace config: %w", err)
 	}
 
+	tracingFuncName := TracingProgName(mode)
+	progSpec := spec.Programs[tracingFuncName]
+	params := info.fn.Type.(*btf.FuncProto).Params
+	if err := t.injectFnArg(progSpec, params); err != nil {
+		return err
+	}
+
 	attachType := ebpf.AttachTraceFExit
 	if mode == TracingModeEntry {
 		attachType = ebpf.AttachTraceFEntry
 	}
 
-	tracingFuncName := TracingProgName(mode)
-	progSpec := spec.Programs[tracingFuncName]
 	progSpec.AttachTarget = info.prog
 	progSpec.AttachTo = info.funcName
 	progSpec.AttachType = attachType
@@ -163,13 +186,18 @@ func (t *bpfTracing) traceFunc(spec *ebpf.CollectionSpec, reusedMaps map[string]
 		return fmt.Errorf("failed to set btrace config: %w", err)
 	}
 
+	tracingFuncName := TracingProgName(mode)
+	progSpec := spec.Programs[tracingFuncName]
+	params := fn.Func.Type.(*btf.FuncProto).Params
+	if err := t.injectFnArg(progSpec, params); err != nil {
+		return err
+	}
+
 	attachType := ebpf.AttachTraceFExit
 	if mode == TracingModeEntry {
 		attachType = ebpf.AttachTraceFEntry
 	}
 
-	tracingFuncName := TracingProgName(mode)
-	progSpec := spec.Programs[tracingFuncName]
 	fnName := fn.Func.Name
 	progSpec.AttachTo = fnName
 	progSpec.AttachType = attachType

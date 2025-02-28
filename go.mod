@@ -1,6 +1,6 @@
 module github.com/leonhwangprojects/btrace
 
-go 1.23.0
+go 1.23.4
 
 toolchain go1.24.0
 
@@ -13,6 +13,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/klauspost/compress v1.17.11
 	github.com/knightsc/gapstone v4.0.1+incompatible
+	github.com/leonhwangprojects/bice v0.1.1-0.20250227143508-96c8dbba466f
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
 	golang.org/x/sync v0.8.0
@@ -21,6 +22,7 @@ require (
 require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	rsc.io/c2go v0.0.0-20170620140410-520c22818a08 // indirect
 )
 
 require (
